@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+import {
+  MAX_PASSWORD_LENGTH,
+  MIN_PASSWORD_LENGTH,
+} from "@/lib/passwordPolicy";
+
 /**
  * Validation schemas for the movie API route handlers. These mirror the
  * `Movie` type in src/types/index.ts (minus the server-managed fields
@@ -230,3 +235,64 @@ export const bulkMoviesSchema = z.object({
 
 /** Parsed bulk-create payload. */
 export type BulkMoviesPayload = z.infer<typeof bulkMoviesSchema>;
+
+
+/**
+ * Validation schemas for the authentication routes. These mirror the
+ * `UserCredentials` and `RegisterData` shapes in src/types/index.ts.
+ *
+ * The password length bounds come from `lib/password.ts` so the API boundary,
+ * the hashing layer and the client-side hints cannot drift apart.
+ */
+
+/** Password rules shared by the register schema and the signup UI. */
+export const passwordSchema = z
+  .string()
+  .min(MIN_PASSWORD_LENGTH, `Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
+  .max(MAX_PASSWORD_LENGTH, "Password is too long");
+
+/** Email rules shared by every auth schema. Normalised to lowercase. */
+export const emailSchema = z
+  .string()
+  .trim()
+  .min(1, "Email is required")
+  .email("Enter a valid email address")
+  .max(320, "Email is too long")
+  .transform((value: string) => value.toLowerCase());
+
+/**
+ * Schema for `POST /api/auth/register`. Mirrors `RegisterData` and enforces the
+ * confirmPassword match server-side (the client checks it too, but the client
+ * check is a convenience, not a control).
+ */
+export const registerSchema = z
+  .object({
+    name: z.string().trim().min(1, "Name is required").max(80, "Name is too long"),
+    email: emailSchema,
+    password: passwordSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+/** Parsed registration payload. */
+export type RegisterPayload = z.infer<typeof registerSchema>;
+
+/**
+ * Schema for `POST /api/auth/login` and `POST /api/auth/admin/login`. Mirrors
+ * `UserCredentials`.
+ *
+ * Deliberately does NOT apply the `passwordSchema` length rules: a sign-in
+ * attempt must fail with the same generic message regardless of *why* the
+ * password is wrong, and rejecting a short password with a distinctive
+ * validation error would leak the password policy applied to existing accounts.
+ */
+export const loginSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(1, "Password is required").max(MAX_PASSWORD_LENGTH),
+});
+
+/** Parsed login payload. */
+export type LoginPayload = z.infer<typeof loginSchema>;

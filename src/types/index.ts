@@ -1,9 +1,22 @@
 // User Types
+
+/**
+ * Authorisation role. `admin` unlocks the admin panel and the catalog
+ * write/upload APIs; `user` is the default for self-service signups.
+ */
+export type UserRole = "user" | "admin";
+
+/**
+ * A user as exposed to clients. This is deliberately the *safe* shape: the
+ * stored password hash is never part of it, so it can be returned from API
+ * routes and held in client state without leaking credentials.
+ */
 export interface User {
   id: string;
   email: string;
   name: string;
   avatar?: string;
+  role: UserRole;
   isPremium: boolean;
   premiumExpiry?: string;
   createdAt: string;
