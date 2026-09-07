@@ -1,0 +1,26 @@
+{
+  "id": "FEAT-001",
+  "type": "chore",
+  "description": "Establish the dependency + configuration baseline for the services/data foundation. Add the missing runtime dependencies to package.json, add a lazy environment-config helper, and fix next.config.js so Next.js App Router API routes are served by Next itself. NOTE: packages CANNOT be installed in this sandbox (registries 403), so this feature is limited to source/config edits that make the later features possible; do NOT run 'npm install'.",
+  "status": "completed",
+  "steps": [
+    "Edit package.json: add to dependencies with pinned, compatible versions: 'mongoose' (^8.5.0), '@azure/storage-blob' (^12.24.0), 'cloudinary' (^2.4.0). Do NOT add next-auth in this feature (auth is out of scope for this foundation task). Keep existing deps untouched.",
+    "Edit next.config.js: REMOVE the async rewrites() block that proxies '/api/:path*' to 'http://localhost:3001/api/:path*'. This currently prevents Next.js App Router route handlers under src/app/api from being reachable. Leave the images.remotePatterns block intact.",
+    "Create src/lib/env.ts: a small helper that reads process.env values LAZILY (via functions, not top-level throws) and exposes typed getters used by the services, e.g. getMongoUri(), getAzureConnectionString(), getAzureContainer() (default 'ott-content' from AZURE_STORAGE_CONTAINER), getCloudinaryConfig(). Each getter throws a clear Error ONLY when called without the value present - never at module import time.",
+    "Do NOT run npm install (it fails with 403 here). Confirm edits are syntactically valid JSON/JS via reading the files back."
+  ],
+  "acceptance_criteria": [
+    "package.json lists mongoose, @azure/storage-blob, and cloudinary under dependencies with valid semver ranges and remains valid JSON.",
+    "next.config.js no longer contains a rewrites() rule pointing at localhost:3001, and still exports a valid Next config object with images.remotePatterns.",
+    "src/lib/env.ts exists, has no top-level throws or top-level process.env access that would crash on import, and exposes lazy getter functions for Mongo/Azure/Cloudinary config.",
+    "Reading package.json and next.config.js back confirms they parse (valid JSON / valid module)."
+  ],
+  "verification": [
+    "Read package.json back and confirm the three new dependencies are present and JSON is valid.",
+    "Read next.config.js and confirm the localhost:3001 rewrite is gone.",
+    "Run 'unset NODE_OPTIONS && node --check next.config.js' to confirm the config file is syntactically valid JavaScript.",
+    "Confirm src/lib/env.ts contains only function-scoped process.env access (grep for top-level throws)."
+  ],
+  "blocked_reason": null,
+  "findings": "Done. (1) package.json dependencies now include mongoose ^8.5.0, @azure/storage-blob ^12.24.0, cloudinary ^2.4.0; next-auth intentionally NOT added; validated as JSON via node JSON.parse. (2) next.config.js rewrites() block proxying /api/:path* to http://localhost:3001 removed; images.remotePatterns preserved; 'unset NODE_OPTIONS && node --check next.config.js' passes. (3) Created src/lib/env.ts with lazy getters getMongoUri(), getAzureConnectionString(), getAzureContainer() (defaults to 'ott-content' via DEFAULT_AZURE_CONTAINER when AZURE_STORAGE_CONTAINER unset), and getCloudinaryConfig() returning {cloudName, apiKey, apiSecret}. Env var names match .env.local (MONGODB_URI, AZURE_STORAGE_CONNECTION_STRING, AZURE_STORAGE_CONTAINER, CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET). All process.env access is inside functions (lines 14, 36); no top-level throws or top-level env reads, so import never crashes. VERIFICATION NOTES: npm install/build/lint not runnable in sandbox (registries 403, no node_modules) as expected. tsc syntax check on env.ts reports only 'Cannot find name process' (missing @types/node, uninstallable offline) which is expected/acceptable. Existing service stubs (mongodbService.ts, cloudinaryService.ts) still have their own module-import-time env access; making those lazy (e.g. to consume src/lib/env.ts) is left to later features per the plan scope."
+}
