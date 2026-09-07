@@ -12,16 +12,23 @@ import { z } from "zod";
  * properties of the `Movie` type; `views` and `downloadCount` are optional
  * because the repository/model default them.
  */
+/**
+ * Earliest plausible film year (Roundhay Garden Scene, 1888). The upper bound
+ * allows a small window past the current year for announced/pre-release titles.
+ */
+const MIN_MOVIE_YEAR = 1888;
+const MAX_MOVIE_YEAR = new Date().getFullYear() + 5;
+
 export const createMovieSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
-  poster: z.string().min(1),
-  background: z.string().min(1),
-  thumbnail: z.string().optional(),
-  videoUrl: z.string().min(1),
-  videoThumbnail: z.string().optional(),
-  rating: z.number(),
-  year: z.number().int(),
+  poster: z.string().url(),
+  background: z.string().url(),
+  thumbnail: z.string().url().optional(),
+  videoUrl: z.string().url(),
+  videoThumbnail: z.string().url().optional(),
+  rating: z.number().min(0).max(10),
+  year: z.number().int().min(MIN_MOVIE_YEAR).max(MAX_MOVIE_YEAR),
   duration: z.string().min(1),
   genre: z.string().min(1),
   genres: z.array(z.string()).optional(),

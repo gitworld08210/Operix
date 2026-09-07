@@ -3,6 +3,7 @@ import type { FilterQuery } from "mongoose";
 import Movie, { MovieDocument } from "@/models/Movie";
 import type { Movie as MovieType } from "@/types";
 
+import { mapMovieObject, type RawMovieObject } from "./mapMovie";
 import { connectToDatabase } from "./mongodbService";
 
 /** Parameters accepted by {@link listMovies}. */
@@ -41,34 +42,7 @@ const DEFAULT_LIMIT = 20;
  */
 function mapMovie(doc: MovieDocument): MovieType {
   const obj = doc.toObject ? doc.toObject() : (doc as any);
-  return {
-    id: String(obj._id),
-    title: obj.title,
-    description: obj.description,
-    poster: obj.poster,
-    background: obj.background,
-    thumbnail: obj.thumbnail,
-    videoUrl: obj.videoUrl,
-    videoThumbnail: obj.videoThumbnail,
-    rating: obj.rating,
-    year: obj.year,
-    duration: obj.duration,
-    genre: obj.genre,
-    genres: obj.genres,
-    cast: obj.cast ?? [],
-    director: obj.director,
-    premium: obj.premium,
-    views: obj.views,
-    downloadCount: obj.downloadCount,
-    createdAt:
-      obj.createdAt instanceof Date
-        ? obj.createdAt.toISOString()
-        : obj.createdAt,
-    updatedAt:
-      obj.updatedAt instanceof Date
-        ? obj.updatedAt.toISOString()
-        : obj.updatedAt,
-  };
+  return mapMovieObject(obj as RawMovieObject);
 }
 
 /**
@@ -84,7 +58,12 @@ export async function listMovies(
     params;
 
   const filter: FilterQuery<MovieDocument> = {};
-  if (genre) filter.genre = genre;
+  if (genre) {
+    // Case-insensitive substring match on genre so the API path agrees with
+    // the offline MovieContext fallback and getMoviesByCategory (both use
+    // substring `.includes()`). Escaping the input keeps it safe as a RegExp.
+    filter.genre = new RegExp(escapeRegExp(genre), "i");
+  }
   if (typeof year === "number") filter.year = year;
   if (typeof premium === "boolean") filter.premium = premium;
 
