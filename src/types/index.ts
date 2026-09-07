@@ -46,6 +46,61 @@ export interface Movie {
   updatedAt: string;
 }
 
+// Web Series Types
+//
+// A Series -> Season -> Episode hierarchy that mirrors the Movie metadata
+// fields (title, description, poster, background, genre, year, cast, director,
+// premium, rating, ...). Each Episode carries its own video (Azure blob URL +
+// blobName), an auto-derived thumbnail, and per-episode metadata.
+
+/** A single playable episode within a season. */
+export interface Episode {
+  /** Episode number within its season (1-based). */
+  episodeNumber: number;
+  title: string;
+  description?: string;
+  /** Azure Blob URL of the episode video (private; served via SAS). */
+  videoUrl: string;
+  /** Azure blob name/key, used to mint SAS tokens for playback. */
+  blobName?: string;
+  /** Poster/still for the episode (auto-derived from video or overridden). */
+  thumbnail?: string;
+  /** Human-readable duration, e.g. "48m". */
+  duration?: string;
+}
+
+/** A season groups an ordered list of episodes. */
+export interface Season {
+  /** Season number (1-based). */
+  seasonNumber: number;
+  title?: string;
+  episodes: Episode[];
+}
+
+/**
+ * A web series. Metadata mirrors {@link Movie} (minus the single `videoUrl`,
+ * which lives per-episode) and adds the `seasons` hierarchy.
+ */
+export interface Series {
+  id: string;
+  title: string;
+  description: string;
+  poster: string;
+  background: string;
+  thumbnail?: string;
+  rating: number;
+  year: number;
+  genre: string;
+  genres?: string[];
+  cast: string[];
+  director: string;
+  premium: boolean;
+  views: number;
+  seasons: Season[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Category {
   id: string;
   title: string;
