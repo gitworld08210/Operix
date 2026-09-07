@@ -46,6 +46,42 @@ export function getAdminApiToken(): string | undefined {
   return process.env.ADMIN_API_TOKEN;
 }
 
+/**
+ * Secret used to sign session cookies, read lazily from NEXTAUTH_SECRET (the
+ * env slot already reserved for auth). Returns `undefined` when unset — it
+ * never falls back to a hardcoded default, because a predictable signing key
+ * would let anyone forge an admin session. Callers must fail closed (401).
+ */
+export function getAuthSecret(): string | undefined {
+  return process.env.NEXTAUTH_SECRET;
+}
+
+/**
+ * Email of the built-in administrator (ADMIN_EMAIL), used by the dedicated
+ * admin login route. Returns `undefined` when unset; the route fails closed.
+ */
+export function getAdminEmail(): string | undefined {
+  return process.env.ADMIN_EMAIL;
+}
+
+/**
+ * Password of the built-in administrator (ADMIN_PASSWORD), used by the
+ * dedicated admin login route. Returns `undefined` when unset; the route fails
+ * closed. Never log this value.
+ */
+export function getAdminPassword(): string | undefined {
+  return process.env.ADMIN_PASSWORD;
+}
+
+/**
+ * Whether the app is running in production, which decides if the session
+ * cookie carries the `Secure` attribute (HTTPS-only). Kept here so the cookie
+ * helper has a single lazy source of truth for env reads.
+ */
+export function isProduction(): boolean {
+  return process.env.NODE_ENV === "production";
+}
+
 export interface CloudinaryConfig {
   cloudName: string;
   apiKey: string;
