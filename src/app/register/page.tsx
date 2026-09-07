@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/contexts/UserContext";
+import { MIN_PASSWORD_LENGTH } from "@/lib/passwordPolicy";
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -13,9 +14,9 @@ export default function RegisterPage() {
     confirmPassword: "",
   });
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
-  const { login } = useUser();
+  const { register } = useUser();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -28,7 +29,8 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
 
-    // Validation
+    // Client-side checks are a convenience for fast feedback only — the server
+    // re-validates all of this, and the server's answer is what counts.
     if (!formData.name || !formData.email || !formData.password) {
       setError("Please fill in all required fields");
       return;
@@ -39,40 +41,24 @@ export default function RegisterPage() {
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters");
+    if (formData.password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
 
-    try {
-      // Mock registration - replace with actual API call
-      // const response = await fetch("/api/auth/register", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify(formData),
-      // });
+    const result = await register(formData);
 
-      // const data = await response.json();
-
-      // For demo, create a mock user
-      const mockUser = {
-        id: "1",
-        email: formData.email,
-        name: formData.name,
-        isPremium: false,
-        createdAt: new Date().toISOString(),
-      };
-
-      login(mockUser);
-      router.push("/");
-      router.refresh();
-    } catch (err) {
-      setError("Failed to register. Please try again.");
-    } finally {
-      setLoading(false);
+    if (!result.success) {
+      setError(result.error ?? "Failed to create your account. Please try again.");
+      setSubmitting(false);
+      return;
     }
+
+    // Registration signs the new account in, so go straight to the catalog.
+    router.push("/");
+    router.refresh();
   };
 
   return (
@@ -90,7 +76,10 @@ export default function RegisterPage() {
           <h2 className="text-3xl font-bold text-white mb-6">Sign Up</h2>
 
           {error && (
-            <div className="mb-6 px-4 py-3 bg-red-900/50 border border-red-700 rounded text-red-200 text-sm">
+            <div
+              role="alert"
+              className="mb-6 px-4 py-3 bg-red-900/50 border border-red-700 rounded text-red-200 text-sm"
+            >
               {error}
             </div>
           )}
@@ -104,9 +93,11 @@ export default function RegisterPage() {
               <input
                 id="name"
                 type="text"
+                autoComplete="name"
                 value={formData.name}
                 onChange={handleChange}
-                className="w-full px-4 py-3 bg-[#333333] border border-transparent focus:border-[#E50914] text-white rounded focus:ring-0 placeholder-gray-500 transition-colors"
+                disabled={submitting}
+                className="w-full px-4 py-3 bg-[#333333] border border-transparent focus:border-[#E50914] text-white rounded focus:ring-0 placeholder-gray-500 transition-colors disabled:opacity-60"
                 placeholder="Enter your name"
               />
             </div>
@@ -114,14 +105,16 @@ export default function RegisterPage() {
             {/* Email */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                Email or phone number
+                Email
               </label>
               <input
                 id="email"
                 type="email"
+                autoComplete="email"
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full px-4 py-3 bg-[#333333] border border-transparent focus:border-[#E50914] text-white rounded focus:ring-0 placeholder-gray-500 transition-colors"
+                disabled={submitting}
+                className="w-full px-4 py-3 bg-[#333333] border border-transparent focus:border-[#E50914] text-white rounded focus:ring-0 placeholder-gray-500 transition-colors disabled:opacity-60"
                 placeholder="Enter your email"
               />
             </div>
@@ -134,47 +127,42 @@ export default function RegisterPage() {
               <input
                 id="password"
                 type="password"
+                autoComplete="new-password"
                 value={formData.password}
                 onChange={handleChange}
-                className="w-full px-4 py-3 bg-[#333333] border border-transparent focus:border-[#E50914] text-white rounded focus:ring-0 placeholder-gray-500 transition-colors"
-                placeholder="Create a password"
+                disabled={submitting}
+                className="w-full px-4 py-3 bg-[#333333] border border-transparent focus:border-[#E50914] text-white rounded focus:ring-0 placeholder-gray-500 transition-colors disabled:opacity-60"
+                placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}
               />
             </div>
 
             {/* Confirm Password */}
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
+              <label
+                htmlFor="confirmPassword"
+                className="block text-sm font-medium text-gray-300 mb-2"
+              >
                 Confirm Password
               </label>
               <input
                 id="confirmPassword"
                 type="password"
+                autoComplete="new-password"
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                className="w-full px-4 py-3 bg-[#333333] border border-transparent focus:border-[#E50914] text-white rounded focus:ring-0 placeholder-gray-500 transition-colors"
+                disabled={submitting}
+                className="w-full px-4 py-3 bg-[#333333] border border-transparent focus:border-[#E50914] text-white rounded focus:ring-0 placeholder-gray-500 transition-colors disabled:opacity-60"
                 placeholder="Confirm your password"
               />
-            </div>
-
-            {/* Terms */}
-            <div className="flex items-start space-x-3 text-sm">
-              <input
-                type="checkbox"
-                className="mt-1 w-4 h-4 text-[#E50914] rounded border-gray-600 focus:ring-[#E50914]"
-                required
-              />
-              <span className="text-gray-400">
-                This page is protected by Google reCAPTCHA to ensure you're not a bot.
-              </span>
             </div>
 
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={submitting}
               className="w-full px-4 py-3 bg-[#E50914] text-white font-bold rounded hover:bg-[#F40612] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Creating Account..." : "Sign Up"}
+              {submitting ? "Creating Account…" : "Sign Up"}
             </button>
           </form>
 
