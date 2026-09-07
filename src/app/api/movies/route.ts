@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 
+import { isAuthorizedAdmin } from "@/lib/adminAuth";
 import { ok, fail } from "@/lib/apiResponse";
 import { createMovieSchema, listMoviesQuerySchema } from "@/lib/validation";
 import {
@@ -47,6 +48,12 @@ export async function GET(request: NextRequest) {
  * Returns the created movie with a 201 status.
  */
 export async function POST(request: NextRequest) {
+  // Write verb: require a valid admin token. Fails closed (401) when the
+  // ADMIN_API_TOKEN env var is unset or the header does not match.
+  if (!isAuthorizedAdmin(request)) {
+    return fail("Unauthorized", 401);
+  }
+
   let body: unknown;
   try {
     body = await request.json();

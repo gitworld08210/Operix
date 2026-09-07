@@ -36,6 +36,16 @@ export function getAzureContainer(): string {
   return process.env.AZURE_STORAGE_CONTAINER || DEFAULT_AZURE_CONTAINER;
 }
 
+/**
+ * Shared secret gating the movie write endpoints (POST/PUT/DELETE). Read lazily
+ * from ADMIN_API_TOKEN and returns `undefined` when unset. Never throws — the
+ * route handlers decide the fail-closed behaviour so an unset token yields 401
+ * rather than crashing an import or a read-only request.
+ */
+export function getAdminApiToken(): string | undefined {
+  return process.env.ADMIN_API_TOKEN;
+}
+
 export interface CloudinaryConfig {
   cloudName: string;
   apiKey: string;

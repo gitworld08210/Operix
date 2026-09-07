@@ -41,10 +41,11 @@ export const uploadVideoToAzure = async (
     const blobServiceClient = getBlobServiceClient();
     const containerClient = blobServiceClient.getContainerClient(containerName);
 
-    // Create container if it doesn't exist
-    await containerClient.createIfNotExists({
-      access: "blob",
-    });
+    // Create container if it doesn't exist. Intentionally omit the `access`
+    // option so the container defaults to PRIVATE: uploaded videos must not be
+    // world-readable by direct URL. Read access is granted exclusively through
+    // short-lived SAS tokens (see generateSasToken).
+    await containerClient.createIfNotExists();
 
     // Generate unique blob name
     const blobName = `movies/${Date.now()}-${file.name.replace(/\s+/g, "-")}`;
