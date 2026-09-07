@@ -201,3 +201,35 @@ export function safeStringEqual(a: string, b: string): boolean {
   if (bufferA.length !== bufferB.length) return false;
   return timingSafeEqual(bufferA, bufferB);
 }
+
+/**
+ * Constant-time comparison of a submitted email/password pair against an
+ * expected pair, for the env-configured administrator (ADMIN_EMAIL /
+ * ADMIN_PASSWORD) whose credentials are not stored as a hash.
+ *
+ * Fails closed: if either expected value is missing or empty, no submission can
+ * ever match. That is what makes an unconfigured admin account unusable rather
+ * than trivially bypassable.
+ *
+ * Both comparisons always run (no short-circuit on the email) so the work done
+ * does not depend on which half was wrong.
+ *
+ * The email comparison is case-insensitive, matching how emails are normalised
+ * everywhere else in the app; the password comparison is exact.
+ */
+export function credentialsMatch(
+  submitted: { email: string; password: string },
+  expected: { email: string | undefined; password: string | undefined },
+): boolean {
+  // Fail closed on an unconfigured admin.
+  if (!expected.email || !expected.password) return false;
+  if (!submitted.email || !submitted.password) return false;
+
+  const emailMatches = safeStringEqual(
+    submitted.email.trim().toLowerCase(),
+    expected.email.trim().toLowerCase(),
+  );
+  const passwordMatches = safeStringEqual(submitted.password, expected.password);
+
+  return emailMatches && passwordMatches;
+}

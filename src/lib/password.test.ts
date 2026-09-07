@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import {
   MAX_PASSWORD_LENGTH,
+  credentialsMatch,
   hashPassword,
   safeStringEqual,
   verifyPassword,
@@ -147,6 +148,81 @@ test("the hashing module's max length mirrors lib/passwordPolicy (no drift)", ()
       policy.MIN_PASSWORD_LENGTH < policy.MAX_PASSWORD_LENGTH,
     "policy bounds must be a sane range",
   );
+});
+
+test("credentialsMatch accepts an exact env-admin credential pair", () => {
+  const expected = { email: "admin@example.com", password: "s3cret-Admin!" };
+
+  assert.equal(
+    credentialsMatch({ email: "admin@example.com", password: "s3cret-Admin!" }, expected),
+    true,
+  );
+});
+
+test("credentialsMatch compares email case-insensitively but password exactly", () => {
+  const expected = { email: "Admin@Example.com", password: "s3cret-Admin!" };
+
+  assert.equal(
+    credentialsMatch({ email: "admin@example.com", password: "s3cret-Admin!" }, expected),
+    true,
+    "email casing must not matter",
+  );
+  assert.equal(
+    credentialsMatch({ email: " admin@example.com ", password: "s3cret-Admin!" }, expected),
+    true,
+    "surrounding whitespace in the email must be tolerated",
+  );
+  assert.equal(
+    credentialsMatch({ email: "admin@example.com", password: "S3CRET-ADMIN!" }, expected),
+    false,
+    "password casing must matter",
+  );
+});
+
+test("credentialsMatch rejects a wrong email or a wrong password", () => {
+  const expected = { email: "admin@example.com", password: "s3cret-Admin!" };
+
+  assert.equal(
+    credentialsMatch({ email: "someone@example.com", password: "s3cret-Admin!" }, expected),
+    false,
+  );
+  assert.equal(
+    credentialsMatch({ email: "admin@example.com", password: "wrong" }, expected),
+    false,
+  );
+});
+
+test("credentialsMatch FAILS CLOSED when the admin env vars are unset", () => {
+  // This is the important security property: an unconfigured admin account must
+  // be unusable, not open.
+  const submissions = [
+    { email: "admin@example.com", password: "anything" },
+    { email: "", password: "" },
+  ];
+  const unconfigured = [
+    { email: undefined, password: undefined },
+    { email: "admin@example.com", password: undefined },
+    { email: undefined, password: "s3cret" },
+    { email: "", password: "" },
+    { email: "admin@example.com", password: "" },
+  ];
+
+  for (const submitted of submissions) {
+    for (const expected of unconfigured) {
+      assert.equal(
+        credentialsMatch(submitted, expected),
+        false,
+        `expected false for expected=${JSON.stringify(expected)}`,
+      );
+    }
+  }
+});
+
+test("credentialsMatch rejects empty submitted credentials against a configured admin", () => {
+  const expected = { email: "admin@example.com", password: "s3cret-Admin!" };
+
+  assert.equal(credentialsMatch({ email: "", password: "s3cret-Admin!" }, expected), false);
+  assert.equal(credentialsMatch({ email: "admin@example.com", password: "" }, expected), false);
 });
 
 test("safeStringEqual matches identical strings and rejects differences", () => {

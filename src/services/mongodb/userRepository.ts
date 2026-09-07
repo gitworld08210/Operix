@@ -125,6 +125,19 @@ export async function touchLastLogin(id: string): Promise<UserType | null> {
   }
 }
 
+/**
+ * Whether an error is MongoDB's duplicate-key violation (code 11000).
+ *
+ * The unique index on `email` is the real guard against duplicate accounts; the
+ * pre-flight {@link emailExists} check is a nicety that can lose a race between
+ * two concurrent signups. Recognising this error lets the register route report
+ * a clean 409 instead of a 500 when that race is lost.
+ */
+export function isDuplicateKeyError(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  return (error as { code?: unknown }).code === 11000;
+}
+
 /** Whether a user already exists with the given email. */
 export async function emailExists(email: string): Promise<boolean> {
   await connectToDatabase();
