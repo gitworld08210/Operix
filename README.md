@@ -1,110 +1,122 @@
-# OTT Platform - Premium Movie Streaming
+# OTT Platform — Premium Movie & Web Series Streaming
 
-A premium OTT (Over-The-Top) platform built with Next.js 14, featuring movie streaming, download functionality, premium subscriptions, and admin management.
+A premium OTT (Over-The-Top) streaming platform built with **Next.js 14 (App
+Router)**. The backend runs inside Next.js as App Router API routes, so a single
+deployment ships both the web app and the API — there is no separate backend
+server.
 
 ## Features
 
-### For Users
-- **Premium UI**: Netflix-style modern interface
-- **Movie Catalog**: Browse and search movies by genre
-- **Video Player**: High-quality streaming with quality selector (480p to 4K)
-- **Download**: Download movies for offline viewing (Premium only)
-- **Premium Subscriptions**: 3 tiers (Basic, Standard, Premium)
-- **Ad System**: Ads for free users, ad-free for premium members
+### For viewers
+- **Premium, modern UI** for browsing movies and web series.
+- **Catalog & search** for movies and series (with per-series episodes).
+- **1-hour rental / unlock** — unlocking a title grants time-limited access.
+- **Secure playback** — video is served from a **private** Azure Blob container
+  via **short-lived SAS URLs**, minted only after the viewer is authorized.
+- **Premium native video player** built on the browser's native `<video>`.
 
-### For Admin
-- **Movie Upload**: Upload movies to your library
-- **Bulk Scrape**: Scrape movie data from external sources
-- **Content Management**: Manage movies, users, and subscriptions
-- **Dashboard**: View stats and recent activity
+### For admins
+- **Separate admin login** (distinct from normal user login).
+- **Bulk upload** of movies and web series (episodes) for **licensed content
+  only** — there is no scraping of external sources.
+- **Admin dashboard** for managing the catalog.
 
-## Tech Stack
+## Tech stack
 
-### Frontend
-- **Next.js 14** with App Router
-- **TypeScript**
-- **Tailwind CSS**
-- **Zustand** (State management)
-- **Axios** (API calls)
+- **Next.js 14** (App Router) + **React 18** + **TypeScript 5**
+- **Tailwind CSS** for styling
+- **Zustand** for client state, **Axios** for HTTP
+- **MongoDB via Mongoose** for data (users, movies, series, rentals)
+- **Azure Blob Storage** for video files (private container + SAS playback)
+- **Cloudinary** for automatic thumbnail generation
+- **Custom `node:crypto` auth** — HMAC-signed session cookies for user and
+  admin sessions (not Azure AD B2C, not NextAuth providers)
 
-### Backend & Storage
-- **Azure Blob Storage** (Video files)
-- **Cloudinary** (Thumbnails, images)
-- **Azure Cosmos DB** (Database)
-- **Azure AD B2C** (Authentication)
-
-## Getting Started
+## Getting started
 
 ### Prerequisites
-- Node.js 18+ 
-- Azure account
-- Cloudinary account
+- Node.js 18+ (Node 20 LTS recommended)
+- A MongoDB connection string (MongoDB Atlas or Azure Cosmos DB for MongoDB)
+- An Azure Storage account (Blob) for video
+- A Cloudinary account for thumbnails
 
 ### Installation
 
-1. Clone the repository:
-```bash
-cd ott-platform
-```
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-2. Install dependencies:
-```bash
-npm install
-```
+2. Configure environment variables — copy `.env.example` to `.env.local` and
+   fill in real values (`.env.local` is gitignored, never commit secrets):
+   ```bash
+   cp .env.example .env.local
+   ```
+   Key variables: `AZURE_STORAGE_CONNECTION_STRING`, `AZURE_STORAGE_ACCOUNT_NAME`,
+   `AZURE_STORAGE_CONTAINER`, `CLOUDINARY_*`, `MONGODB_URI`, `NEXTAUTH_SECRET`
+   (generate with `openssl rand -base64 32`), `NEXTAUTH_URL`, `ADMIN_EMAIL`,
+   `ADMIN_PASSWORD`, `ADMIN_API_TOKEN`. See `.env.example` for the full,
+   annotated list.
 
-3. Configure environment variables:
-Edit `.env.local` with your Azure and Cloudinary credentials:
-```env
-AZURE_STORAGE_CONNECTION_STRING=your_connection_string
-AZURE_STORAGE_ACCOUNT_NAME=your_account_name
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-MONGODB_URI=your_mongodb_uri
-NEXTAUTH_SECRET=your_secret
-```
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
+   Open [http://localhost:3000](http://localhost:3000).
 
-4. Run the development server:
-```bash
-npm run dev
-```
+### Scripts
+- `npm run dev` — start the dev server
+- `npm run build` — production build (emits a standalone server)
+- `npm run start` — run the production build
+- `npm run lint` — lint
+- `npm run test:unit` — run the unit test suite
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## Project Structure
+## Project structure
 
 ```
 ott-platform/
 ├── src/
-│   ├── app/              # Next.js App Router pages
-│   │   ├── admin/        # Admin dashboard
-│   │   ├── login/        # User login
-│   │   ├── register/     # User registration
-│   │   ├── movie/        # Movie detail page
-│   │   ├── movies/       # Movies listing
-│   │   ├── premium/      # Premium plans
-│   │   └── page.tsx      # Homepage
-│   ├── components/       # React components
-│   │   ├── hero/         # Hero section
-│   │   ├── layout/       # Header, Footer, etc.
-│   │   ├── movies/       # Movie cards, carousel
-│   │   └── player/       # Video player
-│   ├── contexts/         # Context providers
-│   ├── types/            # TypeScript types
-│   └── services/         # API services
-├── package.json
+│   ├── app/                 # Next.js App Router
+│   │   ├── admin/           # Admin dashboard + admin login
+│   │   ├── api/             # Backend API routes (the backend)
+│   │   │   ├── auth/        # register, login, admin login, logout, me
+│   │   │   ├── movies/      # movie list/detail/search + write endpoints
+│   │   │   ├── series/      # series list/detail/search
+│   │   │   ├── unlock/      # rental unlock + status
+│   │   │   ├── playback/    # SAS-gated playback URLs (movie/episode)
+│   │   │   └── upload/      # movie / episode / bulk upload
+│   │   ├── login/           # user login
+│   │   ├── register/        # user registration
+│   │   ├── movie/ movies/   # movie detail + listing
+│   │   └── premium/         # premium plans
+│   ├── components/          # UI: hero, layout, movies, player, ui
+│   ├── contexts/            # React context providers
+│   ├── lib/                 # shared helpers
+│   ├── models/              # Mongoose models
+│   ├── services/            # azure, cloudinary, mongodb, upload, api
+│   └── types/               # TypeScript types
+├── Dockerfile               # multi-stage build (standalone output)
+├── DEPLOYMENT.md            # Azure App Service deployment guide
 ├── next.config.js
-└── tsconfig.json
+└── package.json
 ```
 
-## Next Steps
+## Security notes
+- **Sessions** are HMAC-signed with `NEXTAUTH_SECRET`; auth fails closed when it
+  is unset (no predictable default).
+- **Video** stays in a private Blob container; playback URLs are short-lived SAS
+  tokens issued only to authorized viewers. Do not make the container public.
+- **Write/upload APIs** require an admin session or the `ADMIN_API_TOKEN`
+  (`x-admin-token` header).
 
-To complete the platform, implement the following API endpoints:
-- User authentication (NextAuth with Azure AD B2C)
-- Azure Blob Storage upload/download
-- Cloudinary image management
-- Cosmos DB database models
-- Scraping service for bulk movie import
+## Deployment
+
+The app deploys to **Azure App Service** (Linux, Node 20 LTS) either as code
+(standalone output) or as a container. It must run on the **Node.js runtime**
+(not Edge) and is not statically exportable. A GitHub Actions workflow
+(`.github/workflows/azure-deploy.yml`) builds and deploys on push to `main`.
+
+See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for the full step-by-step guide.
 
 ## License
 
