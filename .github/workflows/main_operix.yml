@@ -68,9 +68,12 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
+    # No id-token permission needed: we authenticate with a publish profile
+    # (AZURE_WEBAPP_PUBLISH_PROFILE secret), not OIDC/federated login. This
+    # avoids the AADSTS700016 "application not found in directory" failure that
+    # broke the OIDC azure/login step.
     permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
+      contents: read
 
     steps:
       - name: Download artifact from build job
@@ -78,19 +81,15 @@ jobs:
         with:
           name: node-app
 
-      - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_3D4A1D7BCC51423398F52C19D8617AC6 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_64E95A743A9345CDA6C5B1E9050552A4 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_EC933C086BB14139A49FAC5290F18C17 }}
-
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'Operix'
           slot-name: 'Production'
+          # Authenticate with the downloaded publish profile stored as a repo
+          # secret (Portal -> App Service -> Overview -> Download publish profile).
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           # Start the app with Next.js's own server. `next start` reads the
           # App Service-provided PORT automatically. Without a startup command
           # App Service falls back to its "waiting for your content" page.
