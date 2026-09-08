@@ -111,8 +111,11 @@ produces a self-contained server under `.next/standalone/server.js`.
 
 ### 3c. Deploy
 
-Use the GitHub Actions workflow (section 5), or deploy from the CLI/zip. The
-built output must include `.next/standalone`, `.next/static`, and `public`.
+Use the GitHub Actions workflow (section 5), or deploy from the CLI/zip. Because
+the app uses `output: "standalone"`, the deployed package must be **assembled**
+from the build output — copy `.next/standalone/*` to the package root, then add
+`.next/static` and `public` alongside it. The workflow does this automatically.
+The startup command must be `node server.js`.
 
 ---
 
@@ -151,30 +154,33 @@ docker push <registry>/ott-platform:latest
 
 ## 5. Continuous deployment with GitHub Actions
 
-A workflow is provided at `.github/workflows/azure-deploy.yml`. It runs on push
-to `main` (and via manual **workflow_dispatch**), installs deps with `npm ci`,
-runs unit tests (best-effort), builds, and deploys with
-`azure/webapps-deploy@v3`. Because the app lives in the `ott-platform/`
-subdirectory, the workflow sets `working-directory: ott-platform`.
+A workflow is provided at `.github/workflows/main_operix.yml`. It runs on push
+to `main` (and via manual **workflow_dispatch**), installs deps with
+`npm install`, builds, runs the unit tests (best-effort), assembles the
+standalone deployment package, and deploys with `azure/webapps-deploy@v3`
+(setting the startup command to `node server.js`). The app lives at the repo
+root, so no `working-directory` override is needed.
 
-### 5a. Get the publish profile
+### 5a. Configure authentication (OIDC)
 
-1. Portal → your App Service → **Overview → Get publish profile** (downloads an
-   XML file).
-2. Open it and copy the **entire** contents.
+The workflow authenticates to Azure with **OpenID Connect** via `azure/login@v2`
+(no publish-profile password stored). In the Portal, use **App Service →
+Deployment Center → GitHub** to wire up the connection — this creates the
+federated-identity app registration and populates the required secrets for you.
 
-### 5b. Add GitHub secrets
+### 5b. Required GitHub secrets
 
-In the GitHub repo: **Settings → Secrets and variables → Actions → New
-repository secret**. Add:
+The workflow references these repository secrets (created automatically when you
+set up deployment from the Portal's Deployment Center):
 
 | Secret | Value |
 | --- | --- |
-| `AZUREAPPSERVICE_PUBLISHPROFILE` | the full XML contents of the publish profile |
-| `AZURE_WEBAPP_NAME` | your App Service name (e.g. `my-ott-app`) |
+| `AZUREAPPSERVICE_CLIENTID_*` | client (application) ID of the federated identity |
+| `AZUREAPPSERVICE_TENANTID_*` | Azure AD tenant ID |
+| `AZUREAPPSERVICE_SUBSCRIPTIONID_*` | target subscription ID |
 
-> The workflow references these only as `${{ secrets.* }}` / job env — it never
-> dumps the environment or logs secret values.
+> The workflow references these only as `${{ secrets.* }}` — it never dumps the
+> environment or logs secret values.
 
 ### 5c. Trigger
 
