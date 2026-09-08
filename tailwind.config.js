@@ -23,7 +23,18 @@ module.exports = {
         "hero-pattern": "linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.8), rgba(0,0,0,1))",
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        // System-font stack (no network fetch at build time). Uses Inter if the
+        // visitor happens to have it, otherwise the native UI font on each OS.
+        sans: [
+          "Inter",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Roboto",
+          "Helvetica Neue",
+          "Arial",
+          "sans-serif",
+        ],
       },
     },
   },

@@ -34,7 +34,7 @@ export default function MovieDetailPage({ params }: { params: { id: string } }) 
       <div className="min-h-screen bg-[#141414] flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-white mb-4">Movie not found</h2>
-          <p className="text-gray-400">The movie you're looking for doesn't exist.</p>
+          <p className="text-gray-400">The movie you&apos;re looking for doesn&apos;t exist.</p>
         </div>
       </div>
     );
