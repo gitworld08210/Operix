@@ -21,12 +21,21 @@ export interface ListSeriesResult {
   total: number;
 }
 
-/** Fields a caller may provide when creating a series. */
+/**
+ * Fields a caller may provide when creating a series.
+ *
+ * `seasons` and each season's `episodes` are optional here: the validation
+ * schema applies defaults (an empty array) and the Mongoose schema defaults
+ * missing arrays to `[]`, so a series can be created without any seasons and
+ * seasons can be created without episodes. Making them optional lets the
+ * zod-inferred payload from `createSeriesSchema` assign directly.
+ */
 export type CreateSeriesInput = Omit<
   SeriesType,
-  "id" | "createdAt" | "updatedAt" | "views"
+  "id" | "createdAt" | "updatedAt" | "views" | "seasons"
 > & {
   views?: number;
+  seasons?: Array<Omit<Season, "episodes"> & { episodes?: Episode[] }>;
 };
 
 /** Fields a caller may update on an existing series. */
