@@ -19,10 +19,8 @@ jobs:
       - uses: actions/checkout@v4
 
       # Pin Node 20 explicitly. The unit-test script uses
-      # `node --experimental-strip-types`, a flag that was REMOVED in Node 22+
-      # (type stripping is on by default there), so running the tests on a newer
-      # runtime Node crashes with "bad option: --experimental-strip-types".
-      # setup-node@v4 honours the requested version instead of forcing v24.
+      # `node --experimental-strip-types`, a flag REMOVED in Node 22+, so newer
+      # runner Node crashes with "bad option: --experimental-strip-types".
       - name: Set up Node.js version
         uses: actions/setup-node@v4
         with:
@@ -30,44 +28,36 @@ jobs:
 
       # Use `npm install` (not `npm ci`): this repo does not commit a
       # package-lock.json, and `npm ci` requires one.
+      #
+      # NOTE ON DEPLOYMENT MODEL: this app is deployed to Azure App Service as a
+      # PLAIN Next.js app. next.config.js does NOT set `output: "standalone"`,
+      # so there is no `.next/standalone/server.js`; the app is started with
+      # `next start` (via `npm start`). We build here to fail fast on compile
+      # errors, then ship the source + built `.next` and let App Service run it.
       - name: npm install and build
         run: |
           npm install
           npm run build --if-present
 
-      # Diagnostic: show what the build actually produced so we can confirm the
-      # `output: "standalone"` bundle exists at .next/standalone/server.js.
-      - name: Inspect build output
-        run: |
-          echo "== node version ==" && node -v
-          echo "== .next top level ==" && ls -la .next || echo "no .next"
-          echo "== .next/standalone ==" && ls -la .next/standalone || echo "NO .next/standalone"
-          echo "== effective next config ==" && cat next.config.js
-
-      # Unit tests are informational and must NOT block the deploy: a test
-      # failure (or a Node-version/flag mismatch) should never leave the site
-      # stuck on Azure's "waiting for your content" placeholder. `|| true` keeps
-      # the job green while still surfacing the test output in the logs.
+      # Unit tests are informational and must NOT block the deploy.
       - name: Unit tests (non-blocking)
         run: npm run test:unit --if-present || echo "::warning::unit tests failed or were skipped; continuing with deploy"
 
-      # The app uses Next.js `output: "standalone"`, so the runnable server is
-      # emitted at `.next/standalone/server.js` — NOT at the repo root. Deploying
-      # the raw repo makes Azure show its "waiting for your content" placeholder
-      # because there is no `server.js` to start. Assemble a proper standalone
-      # package here (mirroring the Dockerfile) so the deployed folder has
-      # `server.js` at its root plus the static assets and public files.
-      - name: Assemble standalone deployment package
+      # Prune dev dependencies so the deployed node_modules is production-only,
+      # then package everything App Service needs to run `next start`:
+      # the app source, the built `.next`, node_modules, and the manifests.
+      - name: Prepare production package
         run: |
-          if [ ! -d .next/standalone ]; then
-            echo "::error::.next/standalone was not produced by the build. Ensure next.config.js has output: 'standalone' and the build completed."
-            exit 1
-          fi
+          npm prune --omit=dev
           mkdir deploy
-          cp -r .next/standalone/. deploy/
-          mkdir -p deploy/.next
-          cp -r .next/static deploy/.next/static
+          cp -r .next deploy/.next
+          cp -r node_modules deploy/node_modules
+          cp -r src deploy/src
           if [ -d public ]; then cp -r public deploy/public; fi
+          cp package.json deploy/package.json
+          cp next.config.js deploy/next.config.js
+          # A web.config is not needed for Linux App Service; Oryx/oryx-less
+          # startup uses the startup-command set on the deploy step.
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -101,7 +91,8 @@ jobs:
         with:
           app-name: 'Operix'
           slot-name: 'Production'
-          # The standalone server's entrypoint. Without this, App Service does
-          # not know how to launch the app and serves its placeholder page.
-          startup-command: 'node server.js'
+          # Start the app with Next.js's own server. `next start` reads the
+          # App Service-provided PORT automatically. Without a startup command
+          # App Service falls back to its "waiting for your content" page.
+          startup-command: 'npm run start'
           package: .
