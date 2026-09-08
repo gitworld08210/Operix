@@ -1,12 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // NOTE: We deploy to Azure App Service as a plain Next.js app. App Service's
-  // Oryx build runs `npm install` + `npm run build`, then starts the app with
-  // `npm start` (`next start`). Using `output: 'standalone'` here would emit a
-  // `.next/standalone/server.js` that `next start` does NOT launch, which left
-  // the site stuck on "waiting for your content". So we intentionally do NOT
-  // set `output: 'standalone'` for the App Service (code) deployment. (The
-  // Dockerfile path, if used instead, relies on standalone — see Dockerfile.)
+  // Emit a self-contained server at `.next/standalone/server.js`. On Azure App
+  // Service (Linux, Node) this `server.js` binds to the injected `PORT` and is
+  // launched directly (`node server.js`), which works reliably WITHOUT needing
+  // a Portal "Startup Command". The CI workflow assembles the standalone output
+  // (server.js at the deploy root + .next/static + public) and the start script
+  // runs it. (`next start` was returning 503 because App Service had no startup
+  // command configured to launch it.)
+  output: 'standalone',
   images: {
     remotePatterns: [
       {

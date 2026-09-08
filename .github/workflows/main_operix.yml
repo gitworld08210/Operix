@@ -43,21 +43,23 @@ jobs:
       - name: Unit tests (non-blocking)
         run: npm run test:unit --if-present || echo "::warning::unit tests failed or were skipped; continuing with deploy"
 
-      # Prune dev dependencies so the deployed node_modules is production-only,
-      # then package everything App Service needs to run `next start`:
-      # the app source, the built `.next`, node_modules, and the manifests.
-      - name: Prepare production package
+      # Assemble the Next.js standalone output into a self-contained package.
+      # `output: "standalone"` emits `.next/standalone/` (with server.js + a
+      # trimmed node_modules). App Service launches `node server.js` from the
+      # deploy root, which binds to the injected PORT — no Portal startup
+      # command required. Static assets and public/ are copied alongside.
+      - name: Assemble standalone deployment package
         run: |
-          npm prune --omit=dev
+          if [ ! -d .next/standalone ]; then
+            echo "::error::.next/standalone was not produced. Ensure next.config.js sets output: 'standalone'."
+            exit 1
+          fi
           mkdir deploy
-          cp -r .next deploy/.next
-          cp -r node_modules deploy/node_modules
-          cp -r src deploy/src
+          cp -r .next/standalone/. deploy/
+          mkdir -p deploy/.next
+          cp -r .next/static deploy/.next/static
           if [ -d public ]; then cp -r public deploy/public; fi
-          cp package.json deploy/package.json
-          cp next.config.js deploy/next.config.js
-          # A web.config is not needed for Linux App Service; Oryx/oryx-less
-          # startup uses the startup-command set on the deploy step.
+          echo "== deploy root ==" && ls -la deploy | head -20
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
