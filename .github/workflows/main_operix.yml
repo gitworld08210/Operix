@@ -35,6 +35,15 @@ jobs:
           npm install
           npm run build --if-present
 
+      # Diagnostic: show what the build actually produced so we can confirm the
+      # `output: "standalone"` bundle exists at .next/standalone/server.js.
+      - name: Inspect build output
+        run: |
+          echo "== node version ==" && node -v
+          echo "== .next top level ==" && ls -la .next || echo "no .next"
+          echo "== .next/standalone ==" && ls -la .next/standalone || echo "NO .next/standalone"
+          echo "== effective next config ==" && cat next.config.js
+
       # Unit tests are informational and must NOT block the deploy: a test
       # failure (or a Node-version/flag mismatch) should never leave the site
       # stuck on Azure's "waiting for your content" placeholder. `|| true` keeps
@@ -50,6 +59,10 @@ jobs:
       # `server.js` at its root plus the static assets and public files.
       - name: Assemble standalone deployment package
         run: |
+          if [ ! -d .next/standalone ]; then
+            echo "::error::.next/standalone was not produced by the build. Ensure next.config.js has output: 'standalone' and the build completed."
+            exit 1
+          fi
           mkdir deploy
           cp -r .next/standalone/. deploy/
           mkdir -p deploy/.next
