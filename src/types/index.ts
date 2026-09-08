@@ -152,6 +152,43 @@ export interface Download {
   expiresAt?: string;
 }
 
+// Rental / Unlock Types
+//
+// A `Rental` records a time-limited unlock of a single piece of content by a
+// user. Free users "unlock for 1 hour": one `Rental` row is created with an
+// `expiresAt` one hour after `unlockedAt`, and playback is authorised only
+// while `expiresAt` is in the future. Premium users are always unlocked and
+// never get a `Rental` row (see the shared authorisation helper).
+
+/** What kind of content a rental unlocks. */
+export type RentalContentType = "movie" | "episode";
+
+/**
+ * A time-limited unlock of a single movie or episode. For an episode, the
+ * `seriesId` + `seasonNumber` + `episodeNumber` triple locates it within the
+ * series hierarchy (episodes are embedded subdocuments with no stable id of
+ * their own), while `contentId` carries a stable composite key so lookups have
+ * one field to match on.
+ */
+export interface Rental {
+  id: string;
+  userId: string;
+  contentType: RentalContentType;
+  /** Stable key for the unlocked content (movie id, or `seriesId:s:e`). */
+  contentId: string;
+  /** Present only for episode rentals: the parent series id. */
+  seriesId?: string;
+  /** Present only for episode rentals: 1-based season number. */
+  seasonNumber?: number;
+  /** Present only for episode rentals: 1-based episode number. */
+  episodeNumber?: number;
+  /** When the unlock was granted (ISO string). */
+  unlockedAt: string;
+  /** When the unlock lapses; playback is denied once this is in the past. */
+  expiresAt: string;
+  createdAt: string;
+}
+
 // Ad Types
 export interface Ad {
   id: string;

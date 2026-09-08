@@ -11,3 +11,6 @@ export type {
 export { default as User } from "./User";
 export type { UserDocument } from "./User";
 
+export { default as Rental } from "./Rental";
+export type { RentalDocument } from "./Rental";
+
