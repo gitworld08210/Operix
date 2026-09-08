@@ -90,8 +90,8 @@ jobs:
           # Authenticate with the downloaded publish profile stored as a repo
           # secret (Portal -> App Service -> Overview -> Download publish profile).
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          # Start the app with Next.js's own server. `next start` reads the
-          # App Service-provided PORT automatically. Without a startup command
-          # App Service falls back to its "waiting for your content" page.
-          startup-command: 'npm run start'
+          # NOTE: `startup-command` is NOT supported by webapps-deploy@v3 when
+          # authenticating with a publish profile — it errors out. The startup
+          # command ('npm run start') must instead be set once in the Portal:
+          # App Service -> Configuration -> General settings -> Startup Command.
           package: .
