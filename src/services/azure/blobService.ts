@@ -98,10 +98,22 @@ export const deleteVideoFromAzure = async (
  * of the connection string. Reads env/config lazily; never throws at import
  * time.
  */
+/**
+ * Options for {@link generateSasToken}. Supplying `expiryMinutes` gives
+ * minute-level control over the SAS lifetime (used by the playback route to
+ * size a token to the remaining rental window); when omitted, `expiryHours`
+ * applies. This keeps the original hours-based callers working unchanged.
+ */
+export interface SasTokenOptions {
+  /** Lifetime in minutes; takes precedence over `expiryHours` when provided. */
+  expiryMinutes?: number;
+}
+
 export const generateSasToken = async (
   containerName: string,
   blobName: string,
-  expiryHours: number = 24
+  expiryHours: number = 24,
+  options: SasTokenOptions = {}
 ): Promise<string> => {
   const connectionString = getAzureConnectionString();
 
@@ -127,7 +139,12 @@ export const generateSasToken = async (
   );
 
   const startsOn = new Date();
-  const expiresOn = new Date(startsOn.getTime() + expiryHours * 60 * 60 * 1000);
+  // Minute-granular lifetime when requested (playback route), else hours.
+  const lifetimeMs =
+    typeof options.expiryMinutes === "number"
+      ? options.expiryMinutes * 60 * 1000
+      : expiryHours * 60 * 60 * 1000;
+  const expiresOn = new Date(startsOn.getTime() + lifetimeMs);
 
   const sasQueryParameters = generateBlobSASQueryParameters(
     {

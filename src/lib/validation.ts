@@ -296,3 +296,64 @@ export const loginSchema = z.object({
 
 /** Parsed login payload. */
 export type LoginPayload = z.infer<typeof loginSchema>;
+
+
+/**
+ * Validation for the rental / unlock endpoints (`POST /api/unlock`,
+ * `GET /api/unlock/status`). Mirrors the `Rental` target shape in
+ * src/types/index.ts. Episode unlocks must carry `seriesId` + season/episode
+ * numbers so the episode can be located within its series and a stable
+ * composite content id can be derived; movie unlocks need only `contentId`.
+ */
+export const unlockRequestSchema = z
+  .object({
+    contentType: z.enum(["movie", "episode"]),
+    contentId: z.string().min(1),
+    seriesId: z.string().min(1).optional(),
+    seasonNumber: z.number().int().positive().optional(),
+    episodeNumber: z.number().int().positive().optional(),
+  })
+  .refine(
+    (data) =>
+      data.contentType !== "episode" ||
+      (typeof data.seriesId === "string" &&
+        typeof data.seasonNumber === "number" &&
+        typeof data.episodeNumber === "number"),
+    {
+      message:
+        "Episode unlocks require seriesId, seasonNumber and episodeNumber",
+      path: ["contentType"],
+    },
+  );
+
+/** Parsed unlock request payload. */
+export type UnlockRequestPayload = z.infer<typeof unlockRequestSchema>;
+
+/**
+ * Parser for `GET /api/unlock/status` query parameters. Season/episode numbers
+ * arrive as query strings and are coerced. The same episode-completeness rule
+ * as {@link unlockRequestSchema} applies.
+ */
+export const unlockStatusQuerySchema = z
+  .object({
+    contentType: z.enum(["movie", "episode"]),
+    contentId: z.string().min(1),
+    seriesId: z.string().min(1).optional(),
+    seasonNumber: z.coerce.number().int().positive().optional(),
+    episodeNumber: z.coerce.number().int().positive().optional(),
+  })
+  .refine(
+    (data) =>
+      data.contentType !== "episode" ||
+      (typeof data.seriesId === "string" &&
+        typeof data.seasonNumber === "number" &&
+        typeof data.episodeNumber === "number"),
+    {
+      message:
+        "Episode status requires seriesId, seasonNumber and episodeNumber",
+      path: ["contentType"],
+    },
+  );
+
+/** Parsed unlock-status query. */
+export type UnlockStatusQuery = z.infer<typeof unlockStatusQuerySchema>;
