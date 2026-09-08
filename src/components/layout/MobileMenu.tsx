@@ -44,6 +44,15 @@ export default function MobileMenu() {
             >
               Profile
             </Link>
+            {/* Convenience link only; /admin is gated server-side. */}
+            {user.role === "admin" && (
+              <Link
+                href="/admin"
+                className="block text-base font-bold text-[#E50914] hover:text-[#F40612]"
+              >
+                Admin Dashboard
+              </Link>
+            )}
             <button
               onClick={logout}
               className="block text-base text-red-500 hover:text-red-400"

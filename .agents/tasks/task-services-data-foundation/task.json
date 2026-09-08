@@ -1,0 +1,47 @@
+{
+  "task_id": "task-services-data-foundation",
+  "task_description": "Complete the data/services foundation of the OTT platform (the layer everything else depends on): fix and harden the MongoDB connection + add Mongoose models and a movie repository, harden and correct the Azure Blob + Cloudinary services, build Next.js App Router API routes for movie CRUD/search, and wire the client-side API layer + MovieContext to consume them with an offline mock fallback. Auth (NextAuth/Azure AD B2C), premium/ad controls, and bulk scraping are intentionally deferred. NOTE: this sandbox has no package-registry access (npm/bun/pnpm all 403), so node_modules cannot be installed and 'npm run build'/'npm run lint' cannot execute here; code is written to pass those commands in a networked environment and verified offline via global tsc syntax checks + structural review.",
+  "status": "in_review",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004", "FEAT-005"],
+  "blocked_reason": {
+    "retryable": true,
+    "detail": "RESOLVED: the v1 review's 6 issues have been remediated directly (the subagent_coder tool was still unavailable, so fixes were applied in-session). Remediation landed in 3 focused commits on main. Original 5 feature commits: 2cd1526, d2a3649, dfc14bd, acd64e4, 1455e18. Ready for a v2 semantic review / orchestrator publish. Not pushed."
+  },
+  "review_status": {
+    "iteration": 1,
+    "max_iterations": 3,
+    "latest_review": ".agents/tasks/task-services-data-foundation/2026-09-07-173954-review.md",
+    "verdict": "NEEDS_CHANGES",
+    "remediation_delegated": true,
+    "remediation_applied": true,
+    "remediation_method": "applied in-session (subagent_coder still unavailable)",
+    "remediation_commits": [
+      "fix(security): make Azure container private and gate movie writes (#1,#2)",
+      "fix(api): gate movie [id] writes and increment views on read (#2,#4)",
+      "fix(data): align genre matching, tighten validation, add unit tests (#3,#5,#6)"
+    ],
+    "issues_addressed": {
+      "1": "resolved - Azure container now private (access option omitted); reads via SAS",
+      "2": "resolved - ADMIN_API_TOKEN x-admin-token gate on POST/PUT/DELETE, fail-closed 401; GET open; full auth still deferred",
+      "3": "resolved - listMovies uses case-insensitive escaped regex substring match, consistent with offline fallback",
+      "4": "resolved - incrementViews wired into GET /api/movies/[id]",
+      "5": "resolved - URL validation on poster/background/thumbnail/videoUrl/videoThumbnail; rating 0..10; year 1888..currentYear+5",
+      "6": "partial - added runnable node:test units for pure mapMovie mapping (7 tests pass offline); zod/repo runtime tests deferred (uninstallable imports), documented in mapMovie.test.ts"
+    },
+    "outstanding_issues": [
+      "(1) Azure uploadVideoToAzure uses access:'blob' (public container) which defeats the SAS design - make the container private.",
+      "(2) POST/PUT/DELETE /api/movies are unauthenticated - add a lazy ADMIN_API_TOKEN header gate (fail closed / 401 when unset) on write verbs only; full NextAuth stays deferred.",
+      "(3) Genre filter mismatch: repo listMovies uses exact equality, MovieContext fallback + getMoviesByCategory use substring .includes() - align to case-insensitive matching.",
+      "(4) incrementViews implemented but never called - wire into GET /api/movies/[id].",
+      "(5) createMovieSchema too loose - use z.string().url() for poster/background/videoUrl, bound rating 0..10 and year ~1888..currentYear+5.",
+      "(6) No automated tests - add node:test/node:assert pure-function tests where feasible offline, or document deferral (test runner cannot be npm-installed in this sandbox)."
+    ]
+  },
+  "verification": {
+    "build": "skipped",
+    "tests": "skipped",
+    "test_quality": "n/a",
+    "docker_build": "skipped",
+    "summary": "npm run build and npm run lint could NOT be executed: all package registries (npm/bun/pnpm) return HTTP 403 in this sandbox, so node_modules cannot be installed. No test framework exists in the project and none was in scope. No Dockerfile present. Offline verification performed with global tsc v7 (unset NODE_OPTIONS && tsc --noEmit --skipLibCheck -p tsconfig.json): 100% of reported errors are the unavoidable missing-module / missing-type cascade caused by the absent node_modules (Cannot find module 'react'/'next'/'mongoose'/'axios'/'zod'/'@azure/storage-blob'/'cloudinary', JSX.IntrinsicElements absent, 'process' needs @types/node) and affect even untouched initial-commit files (e.g. src/app/admin/page.tsx). No genuine syntax or type defects were found in any of the five delegated features after filtering these artifacts. The code is written to pass 'npm install && npm run build && npm run lint' in a networked environment."
+  }
+}

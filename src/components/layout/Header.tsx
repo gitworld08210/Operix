@@ -64,6 +64,17 @@ export default function Header() {
             </span>
           )}
 
+          {/* Admin shortcut — only for administrators. This is a convenience
+              link, not a security boundary: /admin is gated server-side. */}
+          {user?.role === "admin" && (
+            <Link
+              href="/admin"
+              className="hidden md:block px-3 py-1 border border-[#E50914] text-[#E50914] text-xs font-bold rounded hover:bg-[#E50914] hover:text-white transition-colors"
+            >
+              ADMIN
+            </Link>
+          )}
+
           {/* User Menu */}
           {user ? (
             <div className="flex items-center space-x-4">
